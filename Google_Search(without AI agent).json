@@ -1,0 +1,410 @@
+{
+  "name": "Google_Search(without AI agent)",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "AI Agent Query",
+        "formDescription": "Submit your search query here to get answers from the AI agent",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "What is your search query?",
+              "placeholder": "Latest news on AI",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -3520,
+        -16
+      ],
+      "id": "5c460265-4503-4a43-8f5f-4c009cebecba",
+      "name": "On form submission",
+      "webhookId": "54b6b0c8-ba37-4cb7-bf32-680cade21eb4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json[\"What is your search query?\"] }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a helpful AI assistant designed to identify search queries. When a user asks a question that requires a Google search, respond with a JSON object. The JSON object must have two keys: - 'tool': The value should always be 'Google Search'. - 'query': The value should be the exact search string for Google.  If the user's request does not require a search, respond with an empty JSON object: {}.  Your response must contain ONLY the JSON object, with no extra text, explanations, or formatting.  Examples: User: What is the capital of France? Response: {\"tool\": \"Google Search\", \"query\": \"capital of France\"}  User: Hello, how are you? Response: {}  User: Tell me about the history of the internet. Response: {\"tool\": \"Google Search\", \"query\": \"history of the internet\"}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -3232,
+        -16
+      ],
+      "id": "2c21c9e3-7100-4a9d-a2d8-04661a79855b",
+      "name": "Basic LLM Chain",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -3232,
+        240
+      ],
+      "id": "c5122b5b-d53b-4ce0-9785-e8bc856fe9cc",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"tool\": \"Google Search\",\n  \"query\": \"example search query\"\n}",
+        "autoFix": true,
+        "customizeRetryPrompt": true,
+        "prompt": "Your last response was not valid JSON or did not match the expected schema. Error details: {error}. Please respond with a valid JSON object only, matching the structure: {\"tool\": \"Google Search\", \"query\": \"...\"}. Do not include any extra text or formatting."
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -2976,
+        240
+      ],
+      "id": "a1cca793-be7f-4e31-8722-eb92ddad1a74",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "355ac0a6-fd8a-4de3-88e5-81e57770217d",
+              "leftValue": "={{ $json.output.tool }}",
+              "rightValue": "Google Search",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2864,
+        -16
+      ],
+      "id": "56f6e41e-ba8e-4b7b-a55b-0dc44edddd5e",
+      "name": "If",
+      "retryOnFail": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/customsearch/v1?key=AIzaSyD8_M1RXS5oF4mjL0qkhzuBBGhXSltsYvQ&cx=f54f0d42aef17405d&q={{ $json.output.query }}&num=10&start=1",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "num",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2592,
+        -16
+      ],
+      "id": "05a9291f-47b5-416c-a2a9-442ddaa86e64",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const firstPageResponse = $input.all()[0].json; // Access the main response object\n\n// If there's no valid response, or it's not a search result, return nothing\nif (!firstPageResponse || !firstPageResponse.searchInformation || !firstPageResponse.queries) {\n    return [];\n}\n\nconst totalResults = parseInt(firstPageResponse.searchInformation.totalResults, 10);\n\nconst searchTerms = firstPageResponse.queries.request && firstPageResponse.queries.request[0]\n                                ? firstPageResponse.queries.request[0].searchTerms\n                                : '';\n\nlet startIndexNextPage = null;\n\n// Check if there's a nextPage token and if the totalResults suggest more pages\nif (firstPageResponse.queries.nextPage && firstPageResponse.queries.nextPage.length > 0 && totalResults > 10) {\n    startIndexNextPage = firstPageResponse.queries.nextPage[0].startIndex;\n}\n\nconst itemsToReturn = [];\n\n// Only return an item if a next page's start index was found\nif (startIndexNextPage !== null) {\n    itemsToReturn.push({\n        json: {\n            query: searchTerms,\n            start: startIndexNextPage\n        }\n    });\n}\n\nreturn itemsToReturn;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2176,
+        -240
+      ],
+      "id": "614939b1-5173-471f-bfc5-1a5f022e37ae",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "51a75d7b-c765-4f8f-8528-054956aac9fb",
+              "leftValue": "={{ $json.start }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1984,
+        -240
+      ],
+      "id": "2cc8c559-272a-4e10-b6fc-98f7c50f36dd",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/customsearch/v1?key=AIzaSyD8_M1RXS5oF4mjL0qkhzuBBGhXSltsYvQ&cx=f54f0d42aef17405d",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "start",
+              "value": "={{ $json.start }}"
+            },
+            {
+              "name": "num",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1696,
+        -256
+      ],
+      "id": "6c0dafe2-306f-4691-8842-6ec2d617ef66",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1216,
+        -48
+      ],
+      "id": "a2622fba-8b63-456c-964c-95794d567d2c",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const itemsArray = $json.items || [];\n\nreturn itemsArray.map(item => {\n  return {\n    json: {\n      title: item.title || null,\n      link: item.link || null,\n      snippet: item.snippet || null,\n      description: item.pagemap?.metatags?.[0]?.[\"og:description\"] || null,\n      image: item.pagemap?.cse_image?.[0]?.src || null,\n      article_text: item.pagemap?.creativework?.[0]?.text || null\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2192,
+        -16
+      ],
+      "id": "a40c3110-b71d-4ccb-8712-27485aa1bba6",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const itemsArray = $json.items || [];\n\nreturn itemsArray.map(item => {\n  return {\n    json: {\n      title: item.title || null,\n      link: item.link || null,\n      snippet: item.snippet || null,\n      description: item.pagemap?.metatags?.[0]?.[\"og:description\"] || null,\n      image: item.pagemap?.cse_image?.[0]?.src || null,\n      article_text: item.pagemap?.creativework?.[0]?.text || null\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1472,
+        -256
+      ],
+      "id": "8da561bc-73ce-4bf9-b59b-177df00d139e",
+      "name": "Code2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "06317645-d744-41a9-97a7-60646e590ad8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "53384da7d0e54333aee57e8645a436dd57da8a3f285afee87f4b1047d394f2f8"
+  },
+  "id": "yz4Lf19AwruKVt4j",
+  "tags": []
+}

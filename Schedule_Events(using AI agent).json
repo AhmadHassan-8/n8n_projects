@@ -1,0 +1,217 @@
+{
+  "name": "Schedule_Events(using AI agent)",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -336,
+        32
+      ],
+      "id": "992c8382-b03b-4eba-8f78-87a679204d79",
+      "name": "When chat message received",
+      "webhookId": "35c73ce7-5505-41f9-b98c-25324053ecd7"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -64,
+        208
+      ],
+      "id": "a379d293-4410-415d-b309-3075d14af0c5",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=Tool Names: ContactsDB, Create_Event, Send_Email\n\nYou are an AI assistant that performs two main tasks:\n\nWhen the user asks for the email of a person, use the ContactsDB tool and return only the email address.\n\nWhen the user asks to schedule a meeting, extract the recipient’s name, and starttime of meeting. If an end time is not given, just add 1 hour to the start time. For reference, the current time/date is {{ $now }}.\n\nFirst, use ContactsDB to get the recipient's email.\n\nThen, use the Create_Event tool to schedule the meeting.\n\nAfter successfully scheduling the event, use the Send_Email tool to send a meeting invitation email to the recipient.\n\nYou must provide for Create_Event:\nStart time\nEnd time\nRecipient email\n\nAlways call Create_Event when a meeting is requested. Do not skip this step."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -16
+      ],
+      "id": "13416031-38d8-49fc-967d-b3121babcba9",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        208
+      ],
+      "id": "bbfbbe1d-b220-40f7-97a7-fd573b0c4e1b",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Get row(s) in sheet in Google Sheetsyou need to search for name and give its email ",
+        "documentId": {
+          "__rl": true,
+          "value": "18nMMWUT09ko0OeZSFiycKHvk39AN6inXpx6YUu8sUs4",
+          "mode": "list",
+          "cachedResultName": "Contacts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18nMMWUT09ko0OeZSFiycKHvk39AN6inXpx6YUu8sUs4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/18nMMWUT09ko0OeZSFiycKHvk39AN6inXpx6YUu8sUs4/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        32,
+        240
+      ],
+      "id": "b7d92f93-541d-46ff-a7fc-5a90ecf7604a",
+      "name": "ContactsDB"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "use this tool to Create an event in Google Calendar at the given start and end time ",
+        "calendar": {
+          "__rl": true,
+          "value": "ahmad.hassan666888@gmail.com",
+          "mode": "list",
+          "cachedResultName": "ahmad.hassan666888@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('attendees0_Attendees', ``, 'string') }}"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        176,
+        208
+      ],
+      "id": "693d631b-271f-491d-9040-1a90dba0ede0",
+      "name": "Create_Event"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": " this tool i sused to Send a confirmation or invite email with full event details to all participants.\n",
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "emailType": "text",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        368,
+        192
+      ],
+      "id": "ac48f2a0-bda0-4827-b40e-3e54fb489c57",
+      "name": "Send_Email",
+      "webhookId": "13741643-0642-4eff-af32-ee47b0428de7"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ContactsDB": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create_Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send_Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c7c1a0c3-817c-41fb-ba3b-4e2bb6a3d296",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "53384da7d0e54333aee57e8645a436dd57da8a3f285afee87f4b1047d394f2f8"
+  },
+  "id": "yz4Lf19AwruKVt4j",
+  "tags": []
+}

@@ -1,0 +1,344 @@
+{
+  "name": "get_rows_sheets(pagination)",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1344,
+        848
+      ],
+      "id": "2520b8f5-a672-4593-a5f2-65f6212adf34",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBCq7xpHhxTF8bpxwCmVl43UqwD0_VxaCc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"role\": \"user\",\n      \"parts\": [\n        {\n          \"text\": \"Categorize the following review as 'positive', 'neutral', or 'negative'. Provide only the row_number, category and the original review in a JSON format.\\nrow_number: \\\"{{ $json.row_number }}.\\nReview: \\\"{{ $json.reviews }}\\\"\\nExample Output: {\\\"row_number\\\": \\\"1\\\",\\\"review\\\": \\\"This product is great!\\\", \\\"category\\\": \\\"positive\\\"}\"\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"responseMimeType\": \"application/json\",\n    \"responseSchema\": {\n      \"type\": \"OBJECT\",\n      \"properties\": {\n        \"row_number\": { \"type\": \"NUMBER\" },\"review\": { \"type\": \"STRING\" },\n        \"category\": { \"type\": \"STRING\", \"enum\": [\"positive\", \"neutral\", \"negative\"] }\n      },\n      \"propertyOrdering\": [\"row_number\",\"review\", \"category\"]\n    }\n  }\n}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 7000
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -816,
+        896
+      ],
+      "id": "3a0d3a26-f8d5-4dba-b996-14d82c0f2567",
+      "name": "HTTP Request",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const outputItems = [];\n\nfor (const item of items) {\n  try {\n    // 1. Extract the raw JSON string from Gemini's response.\n    //    This path is correct based on your HTTP output.\n    const geminiResponseText = item.json.candidates[0].content.parts[0].text;\n//const geminiResponseText =$input.first().json.output ;\n\n    \n    // 2. Parse the Gemini JSON string into a JavaScript object.\n    //    Now, 'parsedGeminiData' will be an object like:\n    //    { \"row_number\": 2, \"review\": \"i liked it!\", \"category\": \"positive\" }\n    const parsedGeminiData = JSON.parse(geminiResponseText);\n\n    // 3. Create a new output item.\n    //    All the necessary fields (row_number, review, category) are now\n    //    directly available within 'parsedGeminiData'.\n    outputItems.push({\n      json: {\n        // Use 'row_number' directly from Gemini's parsed output for matching in Google Sheets\n        rowIdentifier: parsedGeminiData.row_number,\n        // The review text as returned by Gemini (which is your original review)\n        categorizedReviewText: parsedGeminiData.review,\n        // The categorized sentiment from Gemini\n        category: parsedGeminiData.category\n      }\n    });\n\n  } catch (error) {\n    // Handle errors if parsing fails or data is missing.\n    console.error(\"Error processing item in Code node:\", error, item);\n    outputItems.push({\n      json: {\n        // Attempt to get row_number from the parsed data if available,\n        // otherwise fall back to 'unknown'.\n        rowIdentifier: parsedGeminiData ? parsedGeminiData.row_number : 'unknown',\n        categorizedReviewText: 'Error processing review',\n        category: 'Error',\n        errorMessage: error.message\n      }\n    });\n  }\n}\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        896
+      ],
+      "id": "7ff6174f-6134-4873-9cf2-8b8c4d45cc10",
+      "name": "Code",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"start_row\": \"{{ parseInt($json.start_row) + parseInt($json.rows_per_page) }}\",\n  \"rows_per_page\": \"{{ $('set_range1').item.json.rows_per_page }}\",\n  \"end_row\": \"{{ parseInt($json.end_row) + parseInt($json.rows_per_page) }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -672,
+        736
+      ],
+      "id": "83d06171-b150-4569-8b6a-7f7f0a91f680",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"start_row\": \"2\",\n  \"rows_per_page\": \"5\",\n  \"end_row\": \"7\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1552,
+        816
+      ],
+      "id": "22129cc1-3809-4f5d-991f-69977e90edfd",
+      "name": "set_range1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1IHi6BbhE9tf5Fv5iaPyMMHcmGQIi5IonnnVMoIHzoX4",
+          "mode": "list",
+          "cachedResultName": "sentiment analysis",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IHi6BbhE9tf5Fv5iaPyMMHcmGQIi5IonnnVMoIHzoX4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IHi6BbhE9tf5Fv5iaPyMMHcmGQIi5IonnnVMoIHzoX4/edit#gid=0"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRangeA1",
+              "range": "=A{{$json.start_row}}:A{{$json.end_row}}"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -1024,
+        704
+      ],
+      "id": "f159ca6f-40b6-4ae0-bceb-032378b2006f",
+      "name": "Get row(s) in sheet1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "491DJIsOrctoA23u",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a6cd96dd-9226-4749-bd60-55c0c2664004",
+              "name": "originalRowNumber",
+              "value": "={{ $json.row_number }}",
+              "type": "string"
+            },
+            {
+              "id": "32cbf495-14d1-4b87-9927-db1de4f4d719",
+              "name": "originalReviewText",
+              "value": "={{ $json.reviews }}",
+              "type": "string"
+            },
+            {
+              "id": "1f562461-5327-4510-847e-67270319f341",
+              "name": "",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -992,
+        896
+      ],
+      "id": "5a481f82-2010-4348-bafa-8cb37da2760b",
+      "name": "Edit Fields1",
+      "alwaysOutputData": true,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1IHi6BbhE9tf5Fv5iaPyMMHcmGQIi5IonnnVMoIHzoX4",
+          "mode": "list",
+          "cachedResultName": "sentiment analysis",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IHi6BbhE9tf5Fv5iaPyMMHcmGQIi5IonnnVMoIHzoX4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IHi6BbhE9tf5Fv5iaPyMMHcmGQIi5IonnnVMoIHzoX4/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.rowIdentifier }}",
+            "reviews": "={{ $json.categorizedReviewText }}",
+            "category": "={{ $json.category }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "reviews",
+              "displayName": "reviews",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -464,
+        896
+      ],
+      "id": "7c48dd4a-8f59-4cf9-9b96-b9b2e5dfef00",
+      "name": "Update row in sheet1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set_range1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "389c69e5-d978-45c1-89c4-e0baa4ef6912",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "53384da7d0e54333aee57e8645a436dd57da8a3f285afee87f4b1047d394f2f8"
+  },
+  "id": "yz4Lf19AwruKVt4j",
+  "tags": []
+}

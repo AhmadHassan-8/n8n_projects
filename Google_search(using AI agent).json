@@ -1,0 +1,147 @@
+{
+  "name": "Google_search(using AI agent)",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -592,
+        32
+      ],
+      "id": "e0aff700-3547-4cc8-8a87-0df86e05edd4",
+      "name": "When chat message received",
+      "webhookId": "40026c37-e757-491f-bd84-f92f90ec6d3e"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Okay, here is the refined system message again, ready for you to copy and paste directly into the \"System Message\" field of your AI Agent node. This version is designed to be highly directive, compelling the AI to use your Google Search tool immediately when a search is required.\n\nSystem Message for your AI Agent:\n\nYou are a helpful and highly capable AI assistant designed to answer questions by leveraging up-to-date information from the internet.\n\nYou have access to a powerful tool named \"Google Search\".\n\n**Tool Usage Directive:**\n- **IMMEDIATELY USE THE \"Google Search\" TOOL** whenever the user asks a question that requires current factual information, external data, or general knowledge lookup from the internet. Do not provide a pre-response, plan, or commentary about using the tool before executing it.\n- When using the \"Google Search\" tool, provide a concise, relevant, and effective search query as the 'query' parameter. Focus on extracting key terms from the user's question for the search.\n- The \"Google Search\" tool will automatically retrieve up to 20 comprehensive results. You do not need to specify page numbers or result counts.\n\n**Response Guidelines:**\n- After receiving the results from the \"Google Search\" tool, thoroughly analyze and synthesize the information found from ALL the search results.\n- Provide a clear, concise, and accurate answer to the user's original question based *only* on the search results.\n- If the search results are insufficient or ambiguous, clearly state that you were unable to find a definitive answer based on the search.\n- Always provide a direct answer or summary from the search results. Avoid meta-comm"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -384,
+        32
+      ],
+      "id": "c7fadd28-89d7-41f5-83c7-d4dd6b271915",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        240
+      ],
+      "id": "0de62b2d-a39f-4470-a032-0baa85531893",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "toolDescription": "The \"Google Search\" tool will automatically retrieve up to 20 comprehensive results from the internet across multiple pages if available. You do not need to request specific pages or results count from the tool.",
+        "url": "https://www.googleapis.com/customsearch/v1",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyD8_M1RXS5oF4mjL0qkhzuBBGhXSltsYvQ"
+            },
+            {
+              "name": "cx",
+              "value": "f54f0d42aef17405d"
+            },
+            {
+              "name": "q",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters2_Value', ``, 'string') }}"
+            },
+            {
+              "name": "num",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "start",
+                    "value": "={{ (Number($count) || 0) * 10 + 1 }}"
+                  }
+                ]
+              },
+              "limitPagesFetched": true,
+              "maxRequests": 2
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        -112,
+        224
+      ],
+      "id": "dfa26550-d39c-452f-a37b-8d7062d6791d",
+      "name": "Google Search"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Search": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4ddd0288-e7a8-439c-9c95-e612d0307e67",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "53384da7d0e54333aee57e8645a436dd57da8a3f285afee87f4b1047d394f2f8"
+  },
+  "id": "yz4Lf19AwruKVt4j",
+  "tags": []
+}

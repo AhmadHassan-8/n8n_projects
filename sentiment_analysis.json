@@ -1,0 +1,528 @@
+{
+  "name": "sentiment_analysis",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -4240,
+        -176
+      ],
+      "id": "0258c46e-6726-4383-9aba-995610861c27",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1A9vyoJSv73eqG_KyHbfN6NmCJW-H2ph6RTyLKDSfSX8",
+          "mode": "list",
+          "cachedResultName": "test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1A9vyoJSv73eqG_KyHbfN6NmCJW-H2ph6RTyLKDSfSX8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1A9vyoJSv73eqG_KyHbfN6NmCJW-H2ph6RTyLKDSfSX8/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -4016,
+        -176
+      ],
+      "id": "775acb01-2e09-4ccb-9a74-259785644d3b",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9c32fb64-9629-4fbf-a536-0e3ff63287c4",
+              "leftValue": "={{$json[' Sentiment']}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -3792,
+        -176
+      ],
+      "id": "0efcb4f0-2cf2-477c-ae94-0306d39f4942",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "promptType": "=define",
+        "text": "=Analyze the sentiment of the following review. Return a JSON object with one key only: \"sentiment\", and its value should be either \"Positive\", \"Negative\", or \"Neutral\".\n\nReview: {{$json[\"Review\"]}}\n\nRespond strictly in this format:\n{ \"sentiment\": \"Positive\" }\n",
+        "hasOutputParser": true,
+        "batching": {
+          "batchSize": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -3232,
+        -128
+      ],
+      "id": "58e3bdab-9ac2-4546-9ac5-0c1c794cfecb",
+      "name": "Basic LLM Chain",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -3232,
+        96
+      ],
+      "id": "2f8a9656-02e1-4ec4-addf-5d4560f79314",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "amount": 0.2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -3536,
+        -128
+      ],
+      "id": "1178303c-ac34-4db6-8fe5-88aa2d48158a",
+      "name": "Wait",
+      "webhookId": "b3be6b95-119c-4699-9f50-9135d4e655fb"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -2992,
+        96
+      ],
+      "id": "49650181-c761-411c-9f39-7119d9ad7d58",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -2032,
+        -256
+      ],
+      "id": "5c20a0d3-0d5c-4bda-9cd6-ad23d379ba15",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9f1668c3-5f80-473c-ade2-349e597b872d",
+              "name": "row_number",
+              "value": "={{ $json.row_number }}",
+              "type": "number"
+            },
+            {
+              "id": "a6f7d580-7dd4-4622-a83a-59d806711f8d",
+              "name": "output.state",
+              "value": "={{ $json.output.state }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1840,
+        -208
+      ],
+      "id": "38a33054-af8e-4b1b-ac1e-cabb3a1f459c",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1A9vyoJSv73eqG_KyHbfN6NmCJW-H2ph6RTyLKDSfSX8",
+          "mode": "list",
+          "cachedResultName": "test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1A9vyoJSv73eqG_KyHbfN6NmCJW-H2ph6RTyLKDSfSX8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1A9vyoJSv73eqG_KyHbfN6NmCJW-H2ph6RTyLKDSfSX8/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "Sentiment": "={{ $json.output.state }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Review",
+              "displayName": "Review",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -1600,
+        -224
+      ],
+      "id": "b7e119a1-4b33-4b0a-b515-d24ddb071b79",
+      "name": "Update row in sheet"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "52c42c3f-9bc3-4f08-a88c-1004b3bd92ce",
+              "leftValue": "={{ $json.output.state }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2496,
+        -112
+      ],
+      "id": "0c3405e3-b369-4c57-aff1-d5e78a42e0b1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// This code's sole purpose is to clean the raw text output from the LLM\n// and extract the sentiment.\n\nconst rawLLMResponse = $json.text; // Correctly gets the LLM's raw text output\n\nlet cleanedJsonString = rawLLMResponse;\n\n// Remove the leading \"```json\" if it exists.\nif (cleanedJsonString.startsWith('```json')) {\n    cleanedJsonString = cleanedJsonString.substring('```json'.length);\n}\n\n// Remove the trailing \"```\" if it exists.\nif (cleanedJsonString.endsWith('```')) {\n    cleanedJsonString = cleanedJsonString.substring(0, cleanedJsonString.length - '```'.length);\n}\n\n// Trim any remaining whitespace (like newlines) from the beginning or end.\ncleanedJsonString = cleanedJsonString.trim();\n\nlet parsedOutput = {};\n\n// Use a try-catch block to safely parse the JSON.\ntry {\n    parsedOutput = JSON.parse(cleanedJsonString);\n} catch (e) {\n    // If there's an error parsing, log it and set a default 'Error' sentiment.\n    console.error(\"Failed to parse LLM response JSON:\", e);\n    parsedOutput = { sentiment: \"Error\", parsingError: e.message };\n}\n\n// --- IMPORTANT: We are now ONLY returning the 'sentiment' ---\n// The 'row_number' and 'Review' will be combined later by the Merge node.\n// The 'json' property is essential for the Code node's output format.\nreturn [{\n    json: {\n        sentiment: parsedOutput.sentiment, // This is the extracted sentiment\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2880,
+        -128
+      ],
+      "id": "c37ebed3-9ac8-4bcc-b3ec-92c177563fa1",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1A9vyoJSv73eqG_KyHbfN6NmCJW-H2ph6RTyLKDSfSX8",
+          "mode": "list",
+          "cachedResultName": "test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1A9vyoJSv73eqG_KyHbfN6NmCJW-H2ph6RTyLKDSfSX8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1540730834,
+          "mode": "list",
+          "cachedResultName": "sentiment_failure",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1A9vyoJSv73eqG_KyHbfN6NmCJW-H2ph6RTyLKDSfSX8/edit#gid=1540730834"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row number ": "="
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "row number ",
+              "displayName": "row number ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "review",
+              "displayName": "review",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -2032,
+        48
+      ],
+      "id": "396fae25-45db-4aca-88a3-0ce90eb29f64",
+      "name": "Append row in sheet"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "71a9a1ca-2080-48ec-b580-2cf5a152a6c2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "53384da7d0e54333aee57e8645a436dd57da8a3f285afee87f4b1047d394f2f8"
+  },
+  "id": "yz4Lf19AwruKVt4j",
+  "tags": []
+}
